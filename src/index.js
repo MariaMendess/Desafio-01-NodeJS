@@ -14,7 +14,7 @@ function checksExistsUserAccount(req, res, next) {
   const { username } = req.headers;
   const user = users.find(user => user.username === username);
   if (!user) {
-    return res.status(400).json({ error: "User cannot find!" })
+    return res.status(404).json({ error: "User cannot find!" })
   }
 
   req.user = user
@@ -53,15 +53,17 @@ app.post('/todos', (req, res) => {
   const { user } = req;
   const { title, deadline } = req.body;
 
-  user.todos.push({
+  const todo = {
     id: uuidv4(),
     title,
     done: false,
     deadline: new Date(deadline),
-    createdAt: new Date()
-  });
+    created_at: new Date()
+  };
 
-  return res.status(201).json(user.todos)
+  user.todos.push(todo)
+
+  return res.status(201).json(todo)
 });
 
 app.put('/todos/:id', (req, res) => {
@@ -69,18 +71,46 @@ app.put('/todos/:id', (req, res) => {
   const { user } = req;
   const { id } = req.params;
 
-  const getTodo = user.todos.find(todo => todo.id === id)
+  const getTodo = user.todos.find(todo => todo.id === id);
 
-  // TODO: Alterar as infos 
+  if (!getTodo) {
+    return res.status(404).json({ error: "Todo not found!" });
+
+  }
+
+  getTodo.title = title
+  getTodo.deadline = deadline
+
+  return res.status(200).json(getTodo);
 
 });
 
-app.patch('/todos/:id/done', checksExistsUserAccount, (req, res) => {
-  // Complete aqui
+app.patch('/todos/:id/done', (req, res) => {
+  const { user } = req;
+  const { id } = req.params;
+
+  const getTodo = user.todos.find(todo => todo.id === id);
+
+  if (!getTodo) { return res.status(404).json({ error: "Todo not found!" }); }
+
+  getTodo.done = true
+
+  return res.status(200).json(getTodo);
+
 });
 
-app.delete('/todos/:id', checksExistsUserAccount, (req, res) => {
-  // Complete aqui
+app.delete('/todos/:id', (req, res) => {
+  const { user } = req;
+  const { id } = req.params;
+
+  const getTodo = user.todos.findIndex(todo => todo.id === id);
+
+  if (getTodo === -1) { return res.status(404).json({ error: "Todo not found!" }); }
+
+  user.todos.splice(getTodo, 1);
+
+  return res.status(204).send();
+
 });
 
 module.exports = app;
